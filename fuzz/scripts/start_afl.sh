@@ -1,4 +1,5 @@
 #!/bin/bash
+# Start AFL++ with N nodes. 
 
 export AFL_USE_ASAN=1
 

