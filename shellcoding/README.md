@@ -143,3 +143,91 @@ You'll need to craft your instructions creatively by examining the bytes of the 
 | no newlines | mov rax, 10 (48c7c00a000000) | mov rax, 9; inc rax (48c7c00900000048ffc0) |
 | no NULLs | mov rbx, 0x67616c662f (48bbcf666c6167000000) | mov ebx, 0x67616c66; shl rbx, 8; mov bl, 0x2f (bb666c616748c1e308b32f) |
 | printables | mov rax, rbx (4889d8) | push rbx, pop rax (5358, "SX")
+
+### amd64 vs x86: system calls
+
+amd64 uses the `syscall` instruction to dispatch a system call to the OS kernel.
+
+x86 used the `int 0x80` instruction to trigger an interrupt that would be interpreted by the OS kernel as a system call.
+
+### Memory Access Width
+
+Be careful about sizes of memory accesses:
+
+```
+single byte:        mov [rax], bl
+2-byte word:        mov [rax], bx
+4-byte dword:       mov [rax], ebx
+8-byte qword:       mov [rax], rbx
+```
+
+Sometimes, you might have to explicitly specify the size of avoid ambiguity:
+
+```
+single byte:        mov BYTE PTR [rax], 5
+2-byte word:        mov WORD PTR [rax], 5
+4-byte dword:       mov DWORD PTR [rax], 5
+8-byte qword:       mov QWORD PTR [rax], 5
+```
+
+### Shellcode Mangling
+
+Your shellcode might be mangled beyound recognition
+
+- your shellcode might be sorted
+- your shellcode might be compressed or uncompressed
+- your shellcode might be encrypted or decrypted
+
+Start from what you want your shellcode to look like when it's executed, and work backwards.
+
+Parts of your shellcode might be uncontrollable. YOu can jump over these parts to avoid them.
+
+## Data Execution Prevention
+
+Modern architectures support memory permissions:
+
+- PROT_READ allows the process to read memory
+- PROT_WRITE allows the process to write memory
+- PROT_EXEC allows the process to execute memory
+
+By default in modern systems, the stack and heap are not executable.
+
+### de-protecting memory
+
+Memory can be made executable using the `mprotect()` system call:
+
+1. Trick the program into `mprotect(PROT_EXEC)ing` our shellcode
+2. Jump to the shellcode
+
+How do we do #1? Most common way is code reuse through Return Oriented Programming.
+
+### JIT
+
+Just in Time Compilation
+- JIT compilers need to generate (and frequently re-generate) code that is executed
+- Pages must be writable for code generation
+- Pages must be executable for execution
+- Pages must be writable for code re-generation
+
+The safe thing to do would be to:
+- `mmap(PROT_READ|PROT_WRITE)`
+- write the code
+- `mprotect(PROT_READ|PROT_EXEC)`
+- execute
+- `mprotect(PROT_READ|PROT_WRITE)`
+- update the code
+- etc...
+
+However, this is extremely slow. Writable AND executable pages are common.
+
+If your binary uses a library that has a writable+executable page, that page lives in your memory space.
+
+```bash
+cd /proc                                            # there we have directories for all the processes running on the machine
+cat self/maps                                       # self is a link to my current process id
+ls -ld self
+grep -l rwx */maps                                  # see files that match these permissions
+grep -l rwx */maps | parallel "ls -l {//}/exe"      # get the xxx/exe and all of the programs have a pages mapped in memory that is writable and executable
+cat xxx/maps
+grep rwx xxx/maps
+```
