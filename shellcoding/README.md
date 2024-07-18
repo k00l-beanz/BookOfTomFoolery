@@ -93,6 +93,12 @@ Disassembling shellcode:
 objdump -M intel -d shellcode-elf
 ```
 
+Extract hexadecimal shellcode from objdump:
+
+```bash
+objdump -d shellcode-elf | grep "[0-9a-f]:" | grep -v "file" | cut -d ':' -f 2 | cut -d ' ' -f1-7 | tr -s ' ' | tr '\t' ' ' | sed 's/ $//g' | sed 's/ /\\x/g' | paste -d '' -s | sed 's/^/"/' | sed 's/$/"/g'
+```
+
 Sending shellcode to the stdin of a process (wiht user input afterwards):
 
 ```bash
