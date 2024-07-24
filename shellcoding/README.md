@@ -5,10 +5,11 @@
 - [syscall.sh](https://syscall.sh/): Your cheat sheet for syscalls. A glance here, and you're always ahead.
 - [Syscalls Manpage](https://man7.org/linux/man-pages/man2/syscalls.2.html): Understand not just the calls, but their deeper implications.
 - [Felix Cloutier](https://www.felixcloutier.com/x86/): Dive into the heartbeats of instructions, ensuring you're always in step.
-- [x86asm Reference:](http://ref.x86asm.net/coder64.html) Decode the bytes into moves, turning the tables on any challenge.
-- [Debugging - Reverse Execution](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Reverse-Execution.html)
-- [shell-storm](https://shell-storm.org/shellcode/index.html)
-- [Online x86/x64 assembler/disassembler](https://defuse.ca/online-x86-assembler.htm) - Convert assembly into byte code
+- [x86asm Reference:](http://ref.x86asm.net/coder64.html): Decode the bytes into moves, turning the tables on any challenge.
+- [Debugging - Reverse Execution](https://sourceware.org/gdb/current/onlinedocs/gdb.html/Reverse-Execution.html): GDB reverse execution manual
+- [shell-storm](https://shell-storm.org/shellcode/index.html): Database a shellcode
+- [Online x86/x64 assembler/disassembler](https://defuse.ca/online-x86-assembler.htm): Convert assembly into byte code
+- [Shellcode Reduction Tips for x86](https://www.abatchy.com/2017/04/shellcode-reduction-tips-x86): Tips to reduce the size of shellcodes
 
 ## Writing Shellcode
 
@@ -123,6 +124,12 @@ You can also use `gdb`:
 ```bash
 gdb ./shellcode-elf
 r < shellcode-raw
+```
+
+Dump shellcode in raw format. Useful when injecting shellcode onto the stack via shellcode:
+
+```bash
+xxd -e -g 8 -c 8 shellcode-raw | awk '{print $2}' | sed 's/^/0x/g'
 ```
 
 ## Common Challenges
