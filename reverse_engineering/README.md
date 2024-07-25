@@ -1,5 +1,60 @@
 # Reverse Engineering
 
+## Resources
+
+## Static Tools
+
+- [kaitai struct](https://ide.kaitai.io/): file format parser and explorer
+- nm: lists symbols used/proved by ELF files
+- strings: dumps ASCII (and other format) strings found in a file
+- objdump: simple disassembler
+- [checksec](https://github.com/slimm609/checksec.sh): analyze security features used by an executable
+- [angr management](https://github.com/angr/angr-management): an academic binary analysis framework
+- [ghidra](https://ghidra-sre.org/): reversing tool created by NSA
+- [cutter](https://cutter.re/): reversing tool created by the radare2 open source project
+
+## Dynamic Tools
+
+- [asmrepl](https://github.com/tenderlove/asmrepl): ASM REPL. Useful to determine what certain instructions do
+- [angr](https://github.com/angr/angr): Binary analysis framework
+
+### Timeless Debugging
+
+**Timeless debugging** frees you from having to think of breakpoints ahead of time.
+
+1. record execution
+2. rewind execution
+3. replay execution
+
+Relevant tools:
+- gdb has built-in record-replay functionality (https://sourceware.org/gdb/current/onlinedocs/gdb.html/Process-Record-and-Replay.html)
+- [rr](https://github.com/rr-debugger/rr) is a highly performat record-replay engine
+- [qira](https://qira.me/) is a timeless debugger made for reverse engineering
+
+
+### GDB
+
+Position-dependent exutables are loaded at a static address in memory.
+
+Position-independent executables are not...
+
+gdb tries to help by always loading them at 0x0000555555554000 or 0x7ffff7ffc000
+
+Easiest way to deal with this is to put this in your .gdbinit:
+
+```
+set $base = 0x7ffff7ffc000
+```
+
+Afterwards, you can do stuff like:
+
+```
+break *($base + 0x1023)
+```
+
+
+
+
 ## Functions and Frames
 
 A program...
@@ -133,3 +188,43 @@ Data can be in:
 - stack: used for statically-allocated local variables
 - heap: used for dynamically-allocated variables. 
 
+### Accessing data on the stack
+
+Data on the stack is generall accessed via:
+
+- push (to store data on "top" of the stack)
+- pop (to retrieve data from the "top" of the stack)
+- rsp-relative accesses:
+    - load:     mov rdx, [rsp+0x10]
+    - store:    mov [rsp+0x10], rdx
+    - offsets are positive because rsp points to the top of the stack
+- rbp-relative accesses:
+    - load:     mov rdx, [rbp-0x10]
+    - store:    mov [rbp-0x10], rdx
+    - offsets are negative because rbp points to the bottom of the frame
+
+### Accessing data in ELF sections
+
+Data in .bss, .rodata, and .data is stored at known offsets from the program code (in the ELF data sections).
+
+It is accessed via rip-relative instructions.
+
+Load:       mov rax, [rip+0x20040]
+Store:      mov [rip+0x20040], rax
+Reference:  lea rax, [rip+0x20040]
+
+### Accessing data on the heap
+
+Pointers to heap data are generally stored in memory or on the stack. Mind the difference between:
+
+Stack data access:
+```assembly
+mov rax, rsp
+mov rdx, [rax]
+```
+
+Arbitrary data access via stack-stored reference:
+```assembly
+mov rax, [rsp]
+mov rdx, [rax]
+```
